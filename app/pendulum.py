@@ -2,63 +2,75 @@ from scipy.integrate import solve_ivp
 import numpy
 
 
-def pendulum(lenth_list, weight_list, time, init_angles, init_velocities):
-    """
-    Simulate the motion of a pendulum using the given lengths, weights, and initial angles.
+class Pendulum:
+    def __init__(self, lenth_list, weight_list, time, init_angles, init_velocities):
+        self.lenth_list = lenth_list
+        self.weight_list = weight_list
+        self.time = time
+        self.init_angles = init_angles
+        self.init_velocities = init_velocities
 
-    Parameters:
-        lenth_list (list): List of lengths of the pendulum strings.
-        weight_list (list): List of weights of the pendulum bob.
-        time (float): Time duration for which to simulate the motion.
-        init_angles (list): List of initial angles (in radians) for each pendulum.
-        init_velocities (list): List of initial velocities for each pendulum.
+    def eom(self, t, y):
+        """
+        Equations of motion for the pendulum system.
 
-    Returns:
-        list: A list of positions (x, y) for each pendulum at each time step.
-    """
+        Parameters:
+            t (float): Time variable.
+            y (array): State vector containing angles and angular velocities.
 
-    g = 9.81
-    dt = 0.1
+        Returns:
+            array: Derivatives of the state vector.
+        """
+        g = 9.81
 
-    n = len(lenth_list)
-
-    x = numpy.array(init_angles)
-    v = numpy.array(init_velocities)
-
-    positions = []
-    for t in numpy.arange(0, time, dt):
+        n = len(self.lenth_list)
+        x = y[:n]
+        v = y[n:]
 
         A = numpy.zeros((n, n))
         B = numpy.zeros((n, n))
-        
+
         for i in range(n):
             for j in range(n):
                 for k in range(max(i, j), n):
-                    A[i][j] += weight_list[k]
-                    B[i][j] += weight_list[k]
+                    A[i][j] += self.weight_list[k]
+                    B[i][j] += self.weight_list[k]
                 if i == j:
-                    A[i][j] *= lenth_list[j]
+                    A[i][j] *= self.lenth_list[j]
                     B[i][j] *= g * numpy.sin(x[i])
                 else:
-                    A[i][j] *= lenth_list[j]*numpy.cos(x[i]-x[j])
-                    B[i][j] *= lenth_list[j]*v[j]**2*numpy.sin(x[i]-x[j])
-        v += -numpy.linalg.inv(A) @ B @ numpy.ones(n) * dt
-        x += v * dt
+                    A[i][j] *= self.lenth_list[j]*numpy.cos(x[i]-x[j])
+                    B[i][j] *= self.lenth_list[j]*v[j]**2*numpy.sin(x[i]-x[j])
 
-        print(v)
+        return numpy.concatenate([v, -numpy.linalg.inv(A) @ B @ numpy.ones(n)])
 
-        position = []
-        bx, by = 0, 0
-        for i in range(n):
-            px = lenth_list[i] * numpy.sin(x[i]) + bx
-            py = -lenth_list[i] * numpy.cos(x[i]) + by
-            position.append((px, py))
-            bx, by = px, py
-        positions.append(position)
+    def solve(self, flame):
+        """
+        Solve the equations of motion using the initial conditions.
+        Parameters:
+            flame (int): Number of time points to evaluate.
 
-    return positions
+        Returns:
+            list: A list of positions (x, y) for each pendulum at each time step.
+        """
+        y0 = numpy.concatenate([self.init_angles, self.init_velocities])
+        t_span = (0, self.time)
+        t_eval = numpy.linspace(0, self.time, flame)
 
+        sol = solve_ivp(self.eom, t_span, y0, t_eval=t_eval, method='RK45')
 
+        positions = []
+        for pos in sol.y.T:
+            position = []
+            bx, by = 0, 0
+            for i in range(len(self.lenth_list)):
+                px = self.lenth_list[i] * numpy.sin(pos[i]) + bx
+                py = -self.lenth_list[i] * numpy.cos(pos[i]) + by
+                position.append((px, py))
+                bx, by = px, py
+            positions.append(position)
+
+        return positions
 
 
 if __name__ == "__main__":
@@ -66,8 +78,11 @@ if __name__ == "__main__":
     lengths = [1.0, 2.0, 3.0]  # Lengths of the pendulum strings in meters
     weights = [1.0, 2.0, 3.0]   # Weights of the pendulum bob in kg
     init_angles = [0.1, -0.1, 0.2]
-    init_velocities = [0.0, 0.0, 0.0]  # Initial velocities of the pendulum bobs in m/s
+    # Initial velocities of the pendulum bobs in m/s
+    init_velocities = [0.0, 0.0, 0.0]
     time_duration = 10.0         # Time duration in seconds
 
-    result = pendulum(lengths, weights, time_duration, init_angles, init_velocities)
+    pendulum = Pendulum(lengths, weights, time_duration,
+                        init_angles, init_velocities)
+    t, result = pendulum.solve()
     print(result)
