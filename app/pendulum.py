@@ -2,7 +2,7 @@ from scipy.integrate import solve_ivp
 import numpy
 
 
-class Pendulum:
+class PendulumSolver:
     def __init__(self, lenth_list, weight_list, time, init_angles, init_velocities):
         self.lenth_list = lenth_list
         self.weight_list = weight_list
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     init_velocities = [0.0, 0.0, 0.0]
     time_duration = 10.0         # Time duration in seconds
 
-    pendulum = Pendulum(lengths, weights, time_duration,
-                        init_angles, init_velocities)
+    pendulum = PendulumSolver(lengths, weights, time_duration,
+                              init_angles, init_velocities)
     t, result = pendulum.solve()
     print(result)

@@ -3,56 +3,60 @@ import pyxel
 import pendulum
 
 TIME_DURATION = 30  # Time duration in seconds
+SIMURATION_FLAME = 300
 
 LENGTH_RANGE = (5.0, 30.0)  # Length of the pendulum strings in meters
 WEIGHT_RANGE = (1.0, 10.0)  # Weight of the pendulum bob in kg
-INIT_ANGLE_RANGE = (-3.14, 3.14)  # Initial angles of the pendulum bobs in radians
-INIT_VELOCITY_RANGE = (-1.0, 1.0)  # Initial velocities of the pendulum bobs in m/s
+# Initial angles of the pendulum bobs in radians
+INIT_ANGLE_RANGE = (-3.14, 3.14)
+# Initial velocities of the pendulum bobs in m/s
+INIT_VELOCITY_RANGE = (-1.0, 1.0)
 
-def generate_pendulum(n):
-    lengths = [pyxel.rndf(*LENGTH_RANGE) for _ in range(n)]
-    weights = [pyxel.rndf(*WEIGHT_RANGE) for _ in range(n)]
-    init_angles = [pyxel.rndf(*INIT_ANGLE_RANGE) for _ in range(n)]
-    init_velocities = [pyxel.rndf(*INIT_VELOCITY_RANGE) for _ in range(n)]
-    p = pendulum.Pendulum(
-        lengths,
-        weights,
-        TIME_DURATION,
-        init_angles,
-        init_velocities
-    )
-    return p.solve(300)
+
+class Pendulum:
+    def __init__(self, n):
+        lengths = [pyxel.rndf(*LENGTH_RANGE) for _ in range(n)]
+        weights = [pyxel.rndf(*WEIGHT_RANGE) for _ in range(n)]
+        init_angles = [pyxel.rndf(*INIT_ANGLE_RANGE) for _ in range(n)]
+        init_velocities = [pyxel.rndf(*INIT_VELOCITY_RANGE) for _ in range(n)]
+        p = pendulum.PendulumSolver(
+            lengths,
+            weights,
+            TIME_DURATION,
+            init_angles,
+            init_velocities
+        )
+        self.result = p.solve(SIMURATION_FLAME)
+
+    def draw(self, i):
+        center = (80, 60)
+        pos = [(x + center[0], -y + center[1]) for x, y in self.result[i]]
+        pos.insert(0, center)
+        for s, t in zip(pos[:-1], pos[1:]):
+            pyxel.line(s[0], s[1], t[0], t[1], 7)
+        for p in pos[:-1]:
+            pyxel.circ(p[0], p[1], 3, 0)
+            pyxel.circb(p[0], p[1], 3, 7)
+        pyxel.circ(pos[-1][0], pos[-1][1], 3, 0)
+        pyxel.circb(pos[-1][0], pos[-1][1], 3, 8)
 
 class App:
     def __init__(self):
         pyxel.init(160, 120)
-        self.i = 0
 
-        self.result = generate_pendulum(3)
-        self.count = len(self.result)
-        self.n = 3
+        self.pendulums = [Pendulum(3)]
+        self.count = 0
         pyxel.run(self.update, self.draw)
 
     def update(self):
-        if pyxel.btnr(pyxel.KEY_UP):
-            self.n += 1
-        if pyxel.btnr(pyxel.KEY_DOWN):
-            self.n -= 1
-        if pyxel.btnr(pyxel.KEY_SPACE):
-            self.result = generate_pendulum(self.n)
-            self.count = len(self.result)
-            self.i = 0
-        self.i += 1
-        if self.i >= self.count:
-            self.i = 0
+        self.count += 1
+        if self.count >= SIMURATION_FLAME:
+            self.count = 0
 
     def draw(self):
         pyxel.cls(0)
-        pendulum_positions = self.result[self.i]
-        pyxel.circ(80, 60, 2, 7)
-        for pos in pendulum_positions:
-            pyxel.circ(pos[0] + 80, -pos[1] + 60, 2, 8)
-        pyxel.text(10, 10, f"i: {self.i} / {self.count}", 7)
+        for pendulum in self.pendulums:
+            pendulum.draw(self.count)
 
 
 App()
