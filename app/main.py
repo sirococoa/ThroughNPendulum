@@ -88,6 +88,39 @@ class Pendulum:
         if i % 4 == 0:
             AffterImage.add_circle(*pos[-1])
 
+
+class StartPoint:
+    W = 12
+    H = 12
+    X = WINDOW_W // 8
+    Y = FLOAR - H
+    COLOR = 11
+
+    @classmethod
+    def draw(cls):
+        pyxel.rect(cls.X, cls.Y, cls.W, cls.H, cls.COLOR)
+
+class Apple:
+    R = 4
+    COLOR = 8
+
+    X_RANGE = (WINDOW_W // 4, WINDOW_W)
+    Y_RANGE = (FLOAR - 50, FLOAR)
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def draw(self): 
+        pyxel.circ(self.x, self.y, self.R, self.COLOR)
+
+    @classmethod
+    def generate(cls):
+        x = pyxel.rndi(*cls.X_RANGE)
+        y = pyxel.rndi(*cls.Y_RANGE)
+        return cls(x, y)
+
+
 class CharacterStatus(Enum):
     NONE = 0
     JUMP = 1
@@ -218,6 +251,7 @@ class App:
 
         self.pendulums = [Pendulum(3)]
         self.character = Character()
+        self.apples = [Apple.generate() for _ in range(3)]
         self.count = 0
         pyxel.run(self.update, self.draw)
 
@@ -245,6 +279,9 @@ class App:
         AffterImage.draw(reverse=True)
 
         pyxel.clip()
+        StartPoint.draw()
+        for apple in self.apples:
+            apple.draw()
         self.character.draw()
 
         pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
