@@ -71,22 +71,32 @@ class Pendulum:
             init_velocities
         )
         self.result = p.solve(SIMURATION_FLAME)
+        self.center = (80, 30)
+        self.update(0)
+
+    def update(self, i):
+        self.positions = [self.center]
+        for pos in self.result[i]:
+            x = pos[0] + self.center[0]
+            y = -pos[1] + self.center[1]
+            self.positions.append((x, y))
+        self.tip_pos = self.positions[-1]
+
+    def tip_position(self):
+        return self.tip_pos
 
     def draw(self, i, reverse=False):
-        c1, c2 = 0, 7
+        c1, c2, c3 = 0, 7, 7
         if reverse:
-            c1, c2 = 7, 7
-        center = (80, 30)
-        pos = [(x + center[0], -y + center[1]) for x, y in self.result[i]]
-        pos.insert(0, center)
-        for s, t in zip(pos[:-1], pos[1:]):
+            c1, c2, c3 = 7, 7, 0
+        for s, t in zip(self.positions[:-1], self.positions[1:]):
             pyxel.line(s[0], s[1], t[0], t[1], c2)
-        for p in pos[:-1]:
+        for p in self.positions[:-1]:
             pyxel.circ(p[0], p[1], self.SIZE, c1)
             pyxel.circb(p[0], p[1], self.SIZE, c2)
-        pyxel.circ(pos[-1][0], pos[-1][1], self.SIZE, c2)
+        pyxel.circ(self.tip_pos[0], self.tip_pos[1], self.SIZE, c3)
         if i % 4 == 0:
-            AffterImage.add_circle(*pos[-1])
+            AffterImage.add_circle(*self.tip_pos)
 
 
 class StartPoint:
@@ -110,6 +120,7 @@ class Apple:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.colected = False
 
     def draw(self): 
         pyxel.circ(self.x, self.y, self.R, self.COLOR)
@@ -124,6 +135,7 @@ class Apple:
 class CharacterStatus(Enum):
     NONE = 0
     JUMP = 1
+    START = 2
 
 class Character:
     W = 10
@@ -136,6 +148,8 @@ class Character:
     JUMP_COUNT = 5
     JUMP_CHARGE_COUNT = 2
 
+    START_COUNT = 2
+
     COLOR = 10
 
     def __init__(self):
@@ -145,6 +159,15 @@ class Character:
         self.vy = 0
         self.count = 0
         self.status = CharacterStatus.NONE
+        self.double_jumped = False
+
+    def reset(self):
+        self.x = StartPoint.X + StartPoint.W // 2 - self.W // 2
+        self.y = StartPoint.Y + StartPoint.H // 2 - self.H // 2
+        self.vx = 0
+        self.vy = 0
+        self.count = self.START_COUNT
+        self.status = CharacterStatus.START
         self.double_jumped = False
 
     def update(self):
@@ -164,6 +187,8 @@ class Character:
                 self.update_none()
             case CharacterStatus.JUMP:
                 self.update_jump()
+            case CharacterStatus.START:
+                self.update_start()
 
     def update_none(self):
         self.gravity()
@@ -184,6 +209,9 @@ class Character:
         self.gravity()
         self.move_x()
         self.speed_limit()
+
+    def update_start(self):
+        pass
 
     def on_floor(self):
         if self.y + self.H >= FLOAR:
@@ -234,6 +262,28 @@ class Character:
     def pushed_right_button(self):
         return pyxel.btn(pyxel.KEY_D) or pyxel.btn(pyxel.KEY_RIGHT)
 
+    def collisiton_to_apple(self, apple: Apple):
+        px, py = self.x + self.W // 2, self.y + self.H // 2
+        distnce = ((px - apple.x) ** 2 + (py - apple.y) ** 2)
+        if distnce < (self.W // 2 + apple.R) ** 2:
+            return True
+        return False
+
+    def collisiton_to_startpoint(self):
+        if (self.x < StartPoint.X + StartPoint.W and
+            self.x + self.W > StartPoint.X and
+            self.y < StartPoint.Y + StartPoint.H and
+            self.y + self.H > StartPoint.Y):
+            return True
+        return False
+
+    def collisiton_to_pendulum(self, x, y):
+        px, py = self.x + self.W // 2, self.y + self.H // 2
+        distnce = ((px - x) ** 2 + (py - y) ** 2)
+        if distnce < (self.W // 2 + Pendulum.SIZE) ** 2:
+            return True
+        return False
+
     def draw(self):
         dx, dy = 0, 0
         if self.status == CharacterStatus.JUMP:
@@ -259,8 +309,19 @@ class App:
         self.count += 1
         if self.count >= SIMURATION_FLAME:
             self.count = 0
+
+        for pendulum in self.pendulums:
+            pendulum.update(self.count)
         self.character.update()
         AffterImage.update()
+
+        if not self.character.collisiton_to_startpoint():
+            for pendulum in self.pendulums:
+                if self.character.collisiton_to_pendulum(*pendulum.tip_position()):
+                    self.character.reset()
+        for apple in self.apples:
+            if self.character.collisiton_to_apple(apple):
+                apple.colected = True
 
     def draw(self):
         pyxel.cls(0)
@@ -281,9 +342,12 @@ class App:
         pyxel.clip()
         StartPoint.draw()
         for apple in self.apples:
+            if apple.colected:
+                continue
             apple.draw()
         self.character.draw()
 
         pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
+
 
 App()
