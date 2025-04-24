@@ -9,15 +9,6 @@ WINDOW_H = 120
 
 FLOAR = WINDOW_H // 4 * 3
 
-TIME_DURATION = 30  # Time duration in seconds
-SIMURATION_FLAME = 300
-
-LENGTH_RANGE = (5.0, 30.0)  # Length of the pendulum strings in meters
-WEIGHT_RANGE = (1.0, 10.0)  # Weight of the pendulum bob in kg
-# Initial angles of the pendulum bobs in radians
-INIT_ANGLE_RANGE = (-3.14, 3.14)
-# Initial velocities of the pendulum bobs in m/s
-INIT_VELOCITY_RANGE = (-1.0, 1.0)
 
 def generate_gradation(start_color, end_color, steps):
     def interpolate(start, end, factor):
@@ -33,6 +24,7 @@ def generate_gradation(start_color, end_color, steps):
     return tuple(gradation)
 
 GRADATION = generate_gradation(0x2b335f, 0xA9C1FF, 8)
+
 
 class AffterImage:
     SIZE = 5
@@ -50,28 +42,37 @@ class AffterImage:
     @classmethod
     def draw(cls, reverse=False):
         for circle in cls.circles:
-            c = len(GRADATION) * circle[2] // cls.COUNT
+            c = (len(GRADATION) - 1) * circle[2] // cls.COUNT
             if reverse:
-                c = len(GRADATION) - c - 1
+                c = len(GRADATION) - 1 - c
             pyxel.circ(circle[0], circle[1], cls.SIZE, c)
 
 class Pendulum:
     SIZE = 5
 
-    def __init__(self, n):
-        lengths = [pyxel.rndf(*LENGTH_RANGE) for _ in range(n)]
-        weights = [pyxel.rndf(*WEIGHT_RANGE) for _ in range(n)]
-        init_angles = [pyxel.rndf(*INIT_ANGLE_RANGE) for _ in range(n)]
-        init_velocities = [pyxel.rndf(*INIT_VELOCITY_RANGE) for _ in range(n)]
+    TIME_DURATION = 30  # Time duration in seconds
+
+    LENGTH_RANGE = (5.0, 30.0)  # Length of the pendulum strings in meters
+    WEIGHT_RANGE = (1.0, 10.0)  # Weight of the pendulum bob in kg
+    # Initial angles of the pendulum bobs in radians
+    INIT_ANGLE_RANGE = (-3.14, 3.14)
+    # Initial velocities of the pendulum bobs in m/s
+    INIT_VELOCITY_RANGE = (-1.0, 1.0)
+
+    def __init__(self, n, cx, cy, flame):
+        lengths = [pyxel.rndf(*self.LENGTH_RANGE) for _ in range(n)]
+        weights = [pyxel.rndf(*self.WEIGHT_RANGE) for _ in range(n)]
+        init_angles = [pyxel.rndf(*self.INIT_ANGLE_RANGE) for _ in range(n)]
+        init_velocities = [pyxel.rndf(*self.INIT_VELOCITY_RANGE) for _ in range(n)]
         p = pendulum.PendulumSolver(
             lengths,
             weights,
-            TIME_DURATION,
+            self.TIME_DURATION,
             init_angles,
             init_velocities
         )
-        self.result = p.solve(SIMURATION_FLAME)
-        self.center = (80, 30)
+        self.result = p.solve(flame)
+        self.center = (cx, cy)
         self.update(0)
 
     def update(self, i):
@@ -79,7 +80,7 @@ class Pendulum:
         for pos in self.result[i]:
             x = pos[0] + self.center[0]
             y = -pos[1] + self.center[1]
-            self.positions.append((x, y))
+            self.positions.append((int(x), int(y)))
         self.tip_pos = self.positions[-1]
 
     def tip_position(self):
@@ -116,6 +117,8 @@ class Apple:
 
     X_RANGE = (WINDOW_W // 4, WINDOW_W)
     Y_RANGE = (FLOAR - 50, FLOAR)
+
+    NUM_PRE_STAGE = 3
 
     def __init__(self, x, y):
         self.x = x
@@ -293,21 +296,61 @@ class Character:
                 dx, dy = 1, -1
         pyxel.rect(self.x + dx, self.y + dy, self.W - 2*dx, self.H - 2*dy, self.COLOR)
 
+
+class Stage:
+    MAX_N_PENDULUM = 5
+    PENDULUM_CENTERS = (
+        (WINDOW_W // 2, WINDOW_H // 3),
+        (WINDOW_W // 4 * 3, WINDOW_H // 4),
+        (WINDOW_W // 4, WINDOW_H // 4),
+        (WINDOW_W // 8 * 3, WINDOW_H // 6),
+        (WINDOW_W // 8 * 5, WINDOW_H // 6),
+    )
+    INCRESE_PENDULUM_STAGE = 10
+    PENDULUM_RANGE = (2, 5)
+
+    FLAME = 600
+
+    @classmethod
+    def generate(cls, level):
+        pendulum_num = min(cls.MAX_N_PENDULUM, level // cls.INCRESE_PENDULUM_STAGE + 1)
+        pendulums = []
+        for i in range(pendulum_num):
+            cx, cy = cls.PENDULUM_CENTERS[i]
+            n = pyxel.rndi(*cls.PENDULUM_RANGE)
+            pendulum = Pendulum(n, cx, cy, cls.FLAME)
+            pendulums.append(pendulum)
+        apples = [Apple.generate() for _ in range(Apple.NUM_PRE_STAGE)]
+
+        return pendulums, apples
+
+    @classmethod
+    def clear(cls, apples):
+        return all(apple.colected for apple in apples)
+
+    @classmethod
+    def reset(cls, apples):
+        for apple in apples:
+            apple.colected = False
+
+
 class App:
     def __init__(self):
         pyxel.init(WINDOW_W, WINDOW_H)
         for i, c in enumerate(GRADATION):
             pyxel.colors[i] = c
 
-        self.pendulums = [Pendulum(3)]
+        self.level = 1
+        self.pendulums = []
+        self.apples = []
         self.character = Character()
-        self.apples = [Apple.generate() for _ in range(3)]
         self.count = 0
+        self.set_next_stage()
         pyxel.run(self.update, self.draw)
 
     def update(self):
         self.count += 1
-        if self.count >= SIMURATION_FLAME:
+        if self.count >= Stage.FLAME:
             self.count = 0
 
         for pendulum in self.pendulums:
@@ -319,13 +362,24 @@ class App:
             for pendulum in self.pendulums:
                 if self.character.collisiton_to_pendulum(*pendulum.tip_position()):
                     self.character.reset()
+                    Stage.reset(self.apples)
         for apple in self.apples:
             if self.character.collisiton_to_apple(apple):
                 apple.colected = True
+        
+        if self.character.collisiton_to_startpoint():
+            if Stage.clear(self.apples):
+                self.set_next_stage()
+
+    def set_next_stage(self):
+        self.level += 1
+        self.pendulums, self.apples = Stage.generate(self.level)
+        self.character.reset()
+        self.count = 0
 
     def draw(self):
         pyxel.cls(0)
-        draw_split = WINDOW_H * self.count // SIMURATION_FLAME
+        draw_split = WINDOW_H * self.count // Stage.FLAME
 
         pyxel.clip(0, 0, WINDOW_W, draw_split)
         pyxel.rect(0, 0, WINDOW_W, draw_split, 0)
