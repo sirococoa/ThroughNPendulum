@@ -334,6 +334,14 @@ class Stage:
             apple.colected = False
 
 
+class GameState(Enum):
+    MAIN_MENU = 0
+    READY_STAGE = 1
+    NEXT_STAGE = 2
+    PLAYING = 3
+    GAME_OVER = 4
+
+
 class App:
     def __init__(self):
         pyxel.init(WINDOW_W, WINDOW_H)
@@ -345,31 +353,51 @@ class App:
         self.apples = []
         self.character = Character()
         self.count = 0
-        self.set_next_stage()
+        self.status = GameState.MAIN_MENU
         pyxel.run(self.update, self.draw)
 
     def update(self):
-        self.count += 1
-        if self.count >= Stage.FLAME:
-            self.count = 0
-
-        for pendulum in self.pendulums:
-            pendulum.update(self.count)
-        self.character.update()
-        AffterImage.update()
-
-        if not self.character.collisiton_to_startpoint():
-            for pendulum in self.pendulums:
-                if self.character.collisiton_to_pendulum(*pendulum.tip_position()):
+        match self.status:
+            case GameState.MAIN_MENU:
+                self.status = GameState.READY_STAGE
+            case GameState.READY_STAGE:
+                self.set_next_stage()
+                self.status = GameState.NEXT_STAGE
+            case GameState.NEXT_STAGE:
+                if pyxel.btnp(pyxel.KEY_SPACE):
+                    self.status = GameState.PLAYING
+            case GameState.PLAYING:
+                self.count += 1
+                if self.count >= Stage.FLAME:
+                    self.count = 0
+                    self.status = GameState.GAME_OVER
                     self.character.reset()
                     Stage.reset(self.apples)
-        for apple in self.apples:
-            if self.character.collisiton_to_apple(apple):
-                apple.colected = True
+                    return
+
+                for pendulum in self.pendulums:
+                    pendulum.update(self.count)
+                self.character.update()
+                AffterImage.update()
+
+                if not self.character.collisiton_to_startpoint():
+                    for pendulum in self.pendulums:
+                        if self.character.collisiton_to_pendulum(*pendulum.tip_position()):
+                            self.character.reset()
+                            Stage.reset(self.apples)
+                for apple in self.apples:
+                    if self.character.collisiton_to_apple(apple):
+                        apple.colected = True
+                
+                if self.character.collisiton_to_startpoint():
+                    if Stage.clear(self.apples):
+                        self.status = GameState.READY_STAGE
+            case GameState.GAME_OVER:
+                if pyxel.btnp(pyxel.KEY_SPACE):
+                    self.status = GameState.MAIN_MENU
+                if pyxel.btnp(pyxel.KEY_R):
+                    self.status = GameState.PLAYING
         
-        if self.character.collisiton_to_startpoint():
-            if Stage.clear(self.apples):
-                self.set_next_stage()
 
     def set_next_stage(self):
         self.level += 1
@@ -379,29 +407,39 @@ class App:
 
     def draw(self):
         pyxel.cls(0)
-        draw_split = WINDOW_H * self.count // Stage.FLAME
+        match self.status:
+            case GameState.MAIN_MENU:
+                pyxel.text(10, 10, "Pendulum Game", 7)
+            case GameState.READY_STAGE:
+                pyxel.text(10, 10, "Load Game", 7)
+            case GameState.NEXT_STAGE:
+                pyxel.text(10, 10, f"STAGE : {self.level}", 7)
+            case GameState.PLAYING:
+                draw_split = WINDOW_H * self.count // Stage.FLAME
 
-        pyxel.clip(0, 0, WINDOW_W, draw_split)
-        pyxel.rect(0, 0, WINDOW_W, draw_split, 0)
-        for pendulum in self.pendulums:
-            pendulum.draw(self.count)
-        AffterImage.draw()
+                pyxel.clip(0, 0, WINDOW_W, draw_split)
+                pyxel.rect(0, 0, WINDOW_W, draw_split, 0)
+                for pendulum in self.pendulums:
+                    pendulum.draw(self.count)
+                AffterImage.draw()
 
-        pyxel.clip(0, draw_split, WINDOW_W, WINDOW_H - draw_split)
-        pyxel.rect(0, draw_split, WINDOW_W, WINDOW_H - draw_split, 7)
-        for pendulum in self.pendulums:
-            pendulum.draw(self.count, reverse=True)
-        AffterImage.draw(reverse=True)
+                pyxel.clip(0, draw_split, WINDOW_W, WINDOW_H - draw_split)
+                pyxel.rect(0, draw_split, WINDOW_W, WINDOW_H - draw_split, 7)
+                for pendulum in self.pendulums:
+                    pendulum.draw(self.count, reverse=True)
+                AffterImage.draw(reverse=True)
 
-        pyxel.clip()
-        StartPoint.draw()
-        for apple in self.apples:
-            if apple.colected:
-                continue
-            apple.draw()
-        self.character.draw()
+                pyxel.clip()
+                StartPoint.draw()
+                for apple in self.apples:
+                    if apple.colected:
+                        continue
+                    apple.draw()
+                self.character.draw()
 
-        pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
+                pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
+            case GameState.GAME_OVER:
+                pyxel.text(10, 10, "GAME OVER", 7)
 
 
 App()
