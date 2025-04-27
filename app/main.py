@@ -10,6 +10,11 @@ WINDOW_H = 120
 FLOAR = WINDOW_H // 4 * 3
 
 
+def center(text, width):
+    TEXT_W = 4
+    return width // 2 - len(text) * TEXT_W // 2
+
+
 def generate_gradation(start_color, end_color, steps):
     def interpolate(start, end, factor):
         return int(start + (end - start) * factor)
@@ -342,6 +347,57 @@ class GameState(Enum):
     GAME_OVER = 4
 
 
+class MainMenuUI:
+    @classmethod
+    def update(cls):
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            return GameState.READY_STAGE
+
+    @classmethod
+    def draw(cls):
+        s = "Press SPACE to start"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+
+
+class ReadyStageUI:
+    @classmethod
+    def update(cls):
+        return GameState.NEXT_STAGE
+
+    @classmethod
+    def draw(cls):
+        s = "Now loading" + "."*pyxel.frame_count % 4
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+
+
+class NextStageUI:
+    @classmethod
+    def update(cls):
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            return GameState.PLAYING
+
+    @classmethod
+    def draw(cls):
+        s = "Press SPACE to next Stage"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+
+
+class GameOverUI:
+    @classmethod
+    def update(cls):
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            return GameState.PLAYING
+        if pyxel.btnp(pyxel.KEY_R):
+            return GameState.MAIN_MENU
+ 
+    @classmethod
+    def draw(cls):
+        s = "Press SPACE to retry Stage"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+        s = "Press R to Back to Main Menu"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
+
+
 class App:
     def __init__(self):
         pyxel.init(WINDOW_W, WINDOW_H)
@@ -359,13 +415,18 @@ class App:
     def update(self):
         match self.status:
             case GameState.MAIN_MENU:
-                self.status = GameState.READY_STAGE
+                state = MainMenuUI.update()
+                if state:
+                    self.status = state
             case GameState.READY_STAGE:
-                self.set_next_stage()
-                self.status = GameState.NEXT_STAGE
+                state = ReadyStageUI.update()
+                if state:
+                    self.status = state
+                    self.set_next_stage()
             case GameState.NEXT_STAGE:
-                if pyxel.btnp(pyxel.KEY_SPACE):
-                    self.status = GameState.PLAYING
+                state = NextStageUI.update()
+                if state:
+                    self.status = state
             case GameState.PLAYING:
                 self.count += 1
                 if self.count >= Stage.FLAME:
@@ -393,10 +454,12 @@ class App:
                     if Stage.clear(self.apples):
                         self.status = GameState.READY_STAGE
             case GameState.GAME_OVER:
-                if pyxel.btnp(pyxel.KEY_SPACE):
-                    self.status = GameState.MAIN_MENU
-                if pyxel.btnp(pyxel.KEY_R):
-                    self.status = GameState.PLAYING
+                state = GameOverUI.update()
+                if state:
+                    if state == GameState.PLAYING:
+                        self.status = state
+                    if state == GameState.MAIN_MENU:
+                        self.status = state
         
 
     def set_next_stage(self):
@@ -409,11 +472,11 @@ class App:
         pyxel.cls(0)
         match self.status:
             case GameState.MAIN_MENU:
-                pyxel.text(10, 10, "Pendulum Game", 7)
+                MainMenuUI.draw()
             case GameState.READY_STAGE:
-                pyxel.text(10, 10, "Load Game", 7)
+                ReadyStageUI.draw()
             case GameState.NEXT_STAGE:
-                pyxel.text(10, 10, f"STAGE : {self.level}", 7)
+                NextStageUI.draw()
             case GameState.PLAYING:
                 draw_split = WINDOW_H * self.count // Stage.FLAME
 
@@ -439,7 +502,7 @@ class App:
 
                 pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
             case GameState.GAME_OVER:
-                pyxel.text(10, 10, "GAME OVER", 7)
+                GameOverUI.draw()
 
 
 App()
