@@ -260,7 +260,7 @@ class Character:
 
     # Checks if the jump button is pressed (W, SPACE, or UP arrow keys)
     def pushed_jump_button(self):
-        return pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.KEY_UP)
+        return pyxel.btnp(pyxel.KEY_W) or pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.KEY_UP)
 
     # Checks if the left button is pressed (A or LEFT arrow keys)
     def pushed_left_button(self):
