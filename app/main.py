@@ -56,6 +56,7 @@ class AfterImage:
                 c = len(GRADATION) - 1 - c
             pyxel.circ(circle[0], circle[1], cls.SIZE, c)
 
+
 class Pendulum:
     SIZE = 5
 
@@ -153,6 +154,8 @@ class CharacterStatus(Enum):
     NONE = 0
     JUMP = 1
     START = 2
+    DEAD = 3
+    RE_SPAWN = 4
 
 class Character:
     W = 10
@@ -166,6 +169,8 @@ class Character:
     JUMP_CHARGE_COUNT = 2
 
     START_COUNT = 2
+    DEAD_COUNT = 4
+    RE_SPAWN_COUNT = 4
 
     COLOR = 10
 
@@ -180,12 +185,32 @@ class Character:
         self.count = self.START_COUNT
         self.status = CharacterStatus.START
         self.double_jumped = False
+    
+    def dead(self):
+        self.vx = 0
+        self.vy = 0
+        self.status = CharacterStatus.DEAD
+        self.count = self.DEAD_COUNT
+    
+    def is_dead(self):
+        return self.status == CharacterStatus.DEAD
+    
+    def re_spawn(self):
+        self.x = StartPoint.X + StartPoint.W // 2 - self.W // 2
+        self.y = StartPoint.Y + StartPoint.H // 2 - self.H // 2
+        self.vx = 0
+        self.vy = 0
+        self.status = CharacterStatus.RE_SPAWN
+        self.count = self.RE_SPAWN_COUNT
 
     def update(self):
         if self.count > 0:
             self.count -= 1
         if self.count == 0:
-            self.status = CharacterStatus.NONE
+            if self.status == CharacterStatus.DEAD:
+                self.re_spawn()
+            else:
+                self.status = CharacterStatus.NONE
         if self.on_floor():
             self.double_jumped = False
 
@@ -200,6 +225,10 @@ class Character:
                 self.update_jump()
             case CharacterStatus.START:
                 self.update_start()
+            case CharacterStatus.DEAD:
+                self.update_dead()
+            case CharacterStatus.RE_SPAWN:
+                self.update_re_spawn()
 
     def update_none(self):
         self.gravity()
@@ -222,6 +251,12 @@ class Character:
         self.speed_limit()
 
     def update_start(self):
+        pass
+
+    def update_dead(self):
+        pass
+
+    def update_re_spawn(self):
         pass
 
     def on_floor(self):
@@ -302,6 +337,12 @@ class Character:
                 dx, dy = -1, 1
             elif self.JUMP - self.count > self.JUMP_CHARGE_COUNT:
                 dx, dy = 1, -1
+        if self.status == CharacterStatus.DEAD:
+            scale = self.DEAD_COUNT - self.count
+            dx = dy = scale
+        if self.status == CharacterStatus.RE_SPAWN:
+            scale = self.count
+            dx = dy = scale
         pyxel.rect(self.x + dx, self.y + dy, self.W - 2*dx, self.H - 2*dy, self.COLOR)
 
 
@@ -512,10 +553,10 @@ class App:
                     pendulum.update(self.count)
                 self.character.update()
                 AfterImage.update()
-
                 if not self.character.collision_to_startpoint():
                     for pendulum in self.pendulums:
-                        if self.character.collision_to_pendulum(*pendulum.tip_position()):
+                        if self.character.collision_to_pendulum(*pendulum.tip_position()) and not self.character.is_dead():
+                            self.character.dead()
                             self.restart()
                 for apple in self.apples:
                     if self.character.collision_to_apple(apple):
@@ -541,7 +582,6 @@ class App:
         AfterImage.clear()
 
     def restart(self):
-        self.character.reset()
         Stage.reset(self.apples)
     
     def game_over(self):
