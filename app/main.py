@@ -400,6 +400,8 @@ class MainMenuUI(UIBase):
     @classmethod
     def draw(cls):
         super().draw()
+        s = "Through the N Pendulum"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
 
 
 class ReadyStageUI(UIBase):
