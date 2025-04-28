@@ -426,8 +426,10 @@ class NextStageUI(UIBase):
                     return GameState.PLAYING
 
     @classmethod
-    def draw(cls):
+    def draw(cls, level):
         super().draw()
+        s = f"Stage : {level}"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
 
 
 class GameOverUI(UIBase):
@@ -448,6 +450,8 @@ class GameOverUI(UIBase):
     @classmethod
     def draw(cls):
         super().draw()
+        s = "GAME OVER"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
 
 
 class App:
@@ -528,7 +532,7 @@ class App:
             case GameState.READY_STAGE:
                 ReadyStageUI.draw()
             case GameState.NEXT_STAGE:
-                NextStageUI.draw()
+                NextStageUI.draw(self.level)
             case GameState.PLAYING:
                 draw_split = WINDOW_H * self.count // Stage.FLAME
 
