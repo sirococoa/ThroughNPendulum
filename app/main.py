@@ -347,55 +347,107 @@ class GameState(Enum):
     GAME_OVER = 4
 
 
-class MainMenuUI:
+class Button:
+    W = 60
+    H = 10
+
+    def __init__(self, x, y, message):
+        self.x = x
+        self.y = y
+        self.message = message
+
+    def draw(self, selected):
+        if selected:
+            c = 10
+        else:
+            c = 13
+        pyxel.rectb(self.x, self.y, self.W, self.H, c)
+        pyxel.text(self.x + center(self.message, self.W), self.y + self.H // 2 - 3, self.message, c)
+
+class UIBase:
+    buttons = []
+    selected_index = 0
+
+    @classmethod
+    def reset(cls):
+        cls.selected_index = 0
+
     @classmethod
     def update(cls):
+        if pyxel.btnp(pyxel.KEY_D):
+            cls.selected_index = (cls.selected_index - 1) % len(cls.buttons)
+        elif pyxel.btnp(pyxel.KEY_A):
+            cls.selected_index = (cls.selected_index + 1) % len(cls.buttons)
+    
+    @classmethod
+    def draw(cls):
+        for i, button in enumerate(cls.buttons):
+            button.draw(i==cls.selected_index)
+
+
+class MainMenuUI(UIBase):
+    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Start")
+    buttons = [start_button]
+
+    @classmethod
+    def update(cls):
+        super().update()
         if pyxel.btnp(pyxel.KEY_SPACE):
-            return GameState.READY_STAGE
+            match cls.buttons[cls.selected_index]:
+                case cls.start_button:
+                    return GameState.READY_STAGE
 
     @classmethod
     def draw(cls):
-        s = "Press SPACE to start"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+        super().draw()
 
 
-class ReadyStageUI:
+class ReadyStageUI(UIBase):
     @classmethod
     def update(cls):
         return GameState.NEXT_STAGE
 
     @classmethod
     def draw(cls):
-        s = "Now loading" + "."*pyxel.frame_count % 4
+        s = "Now loading" + "."*(pyxel.frame_count % 4)
         pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
 
 
-class NextStageUI:
+class NextStageUI(UIBase):
+    next_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Next Stage")
+    buttons = [next_button]
+
     @classmethod
     def update(cls):
+        super().update()
         if pyxel.btnp(pyxel.KEY_SPACE):
-            return GameState.PLAYING
+            match cls.buttons[cls.selected_index]:
+                case cls.next_button:
+                    return GameState.PLAYING
 
     @classmethod
     def draw(cls):
-        s = "Press SPACE to next Stage"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
+        super().draw()
 
 
-class GameOverUI:
+class GameOverUI(UIBase):
+    retry_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Retry Stage")
+    main_menu_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 + Button.H, "Main Menu")
+    buttons = [retry_button, main_menu_button]
+
     @classmethod
     def update(cls):
+        super().update()
         if pyxel.btnp(pyxel.KEY_SPACE):
-            return GameState.PLAYING
-        if pyxel.btnp(pyxel.KEY_R):
-            return GameState.MAIN_MENU
+            match cls.buttons[cls.selected_index]:
+                case cls.retry_button:
+                    return GameState.PLAYING
+                case cls.main_menu_button:
+                    return GameState.MAIN_MENU
  
     @classmethod
     def draw(cls):
-        s = "Press SPACE to retry Stage"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
-        s = "Press R to Back to Main Menu"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
+        super().draw()
 
 
 class App:
