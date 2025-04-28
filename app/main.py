@@ -39,6 +39,10 @@ class AfterImage:
     @classmethod
     def add_circle(cls, x, y):
         cls.circles.append((x, y, cls.COUNT))
+    
+    @classmethod
+    def clear(cls):
+        cls.circles = []
 
     @classmethod
     def update(cls):
@@ -161,13 +165,7 @@ class Character:
     COLOR = 10
 
     def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.vx = 0
-        self.vy = 0
-        self.count = 0
-        self.status = CharacterStatus.NONE
-        self.double_jumped = False
+        self.reset()
 
     def reset(self):
         self.x = StartPoint.X + StartPoint.W // 2 - self.W // 2
@@ -462,13 +460,21 @@ class App:
         for i, c in enumerate(GRADATION):
             pyxel.colors[i] = c
 
-        self.level = 1
+        self.initialize()
+        pyxel.run(self.update, self.draw)
+    
+    def initialize(self):
+        self.level = 0
         self.pendulums = []
         self.apples = []
         self.character = Character()
         self.count = 0
         self.status = GameState.MAIN_MENU
-        pyxel.run(self.update, self.draw)
+        AfterImage.clear()
+        MainMenuUI.reset()
+        ReadyStageUI.reset()
+        NextStageUI.reset()
+        GameOverUI.reset()
 
     def update(self):
         match self.status:
@@ -502,8 +508,7 @@ class App:
                 if not self.character.collision_to_startpoint():
                     for pendulum in self.pendulums:
                         if self.character.collision_to_pendulum(*pendulum.tip_position()):
-                            self.character.reset()
-                            Stage.reset(self.apples)
+                            self.restart()
                 for apple in self.apples:
                     if self.character.collision_to_apple(apple):
                         apple.collected = True
@@ -518,13 +523,18 @@ class App:
                         self.status = state
                     if state == GameState.MAIN_MENU:
                         self.status = state
-        
+                        self.initialize()
 
     def set_next_stage(self):
         self.level += 1
         self.pendulums, self.apples = Stage.generate(self.level)
         self.character.reset()
         self.count = 0
+        AfterImage.clear()
+
+    def restart(self):
+        self.character.reset()
+        Stage.reset(self.apples)
 
     def draw(self):
         pyxel.cls(0)
