@@ -7,7 +7,7 @@ import pendulum
 WINDOW_W = 160
 WINDOW_H = 120
 
-FLOAR = WINDOW_H // 4 * 3
+FLOOR = WINDOW_H // 4 * 3
 
 
 def center(text, width):
@@ -31,7 +31,7 @@ def generate_gradation(start_color, end_color, steps):
 GRADATION = generate_gradation(0x2b335f, 0xA9C1FF, 8)
 
 
-class AffterImage:
+class AfterImage:
     SIZE = 5
     COUNT = 20
     circles = [] # [(x, y, count)]
@@ -102,14 +102,14 @@ class Pendulum:
             pyxel.circb(p[0], p[1], self.SIZE, c2)
         pyxel.circ(self.tip_pos[0], self.tip_pos[1], self.SIZE, c3)
         if i % 4 == 0:
-            AffterImage.add_circle(*self.tip_pos)
+            AfterImage.add_circle(*self.tip_pos)
 
 
 class StartPoint:
     W = 12
     H = 12
     X = WINDOW_W // 8
-    Y = FLOAR - H
+    Y = FLOOR - H
     COLOR = 11
 
     @classmethod
@@ -121,14 +121,14 @@ class Apple:
     COLOR = 8
 
     X_RANGE = (WINDOW_W // 4, WINDOW_W)
-    Y_RANGE = (FLOAR - 50, FLOAR)
+    Y_RANGE = (FLOOR - 50, FLOOR)
 
     NUM_PRE_STAGE = 3
 
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.colected = False
+        self.collected = False
 
     def draw(self): 
         pyxel.circ(self.x, self.y, self.R, self.COLOR)
@@ -222,7 +222,7 @@ class Character:
         pass
 
     def on_floor(self):
-        if self.y + self.H >= FLOAR:
+        if self.y + self.H >= FLOOR:
             return True
         return False
 
@@ -230,7 +230,7 @@ class Character:
     def gravity(self):
         if self.on_floor():
             self.vy = 0
-            self.y = FLOAR - self.H
+            self.y = FLOOR - self.H
         else:
             self.vy += 1
 
@@ -270,14 +270,14 @@ class Character:
     def pushed_right_button(self):
         return pyxel.btn(pyxel.KEY_D) or pyxel.btn(pyxel.KEY_RIGHT)
 
-    def collisiton_to_apple(self, apple: Apple):
+    def collision_to_apple(self, apple: Apple):
         px, py = self.x + self.W // 2, self.y + self.H // 2
-        distnce = ((px - apple.x) ** 2 + (py - apple.y) ** 2)
-        if distnce < (self.W // 2 + apple.R) ** 2:
+        distance = ((px - apple.x) ** 2 + (py - apple.y) ** 2)
+        if distance < (self.W // 2 + apple.R) ** 2:
             return True
         return False
 
-    def collisiton_to_startpoint(self):
+    def collision_to_startpoint(self):
         if (self.x < StartPoint.X + StartPoint.W and
             self.x + self.W > StartPoint.X and
             self.y < StartPoint.Y + StartPoint.H and
@@ -285,10 +285,10 @@ class Character:
             return True
         return False
 
-    def collisiton_to_pendulum(self, x, y):
+    def collision_to_pendulum(self, x, y):
         px, py = self.x + self.W // 2, self.y + self.H // 2
-        distnce = ((px - x) ** 2 + (py - y) ** 2)
-        if distnce < (self.W // 2 + Pendulum.SIZE) ** 2:
+        distance = ((px - x) ** 2 + (py - y) ** 2)
+        if distance < (self.W // 2 + Pendulum.SIZE) ** 2:
             return True
         return False
 
@@ -311,14 +311,14 @@ class Stage:
         (WINDOW_W // 8 * 3, WINDOW_H // 6),
         (WINDOW_W // 8 * 5, WINDOW_H // 6),
     )
-    INCRESE_PENDULUM_STAGE = 10
+    INCREASE_PENDULUM_STAGE = 10
     PENDULUM_RANGE = (2, 5)
 
     FLAME = 600
 
     @classmethod
     def generate(cls, level):
-        pendulum_num = min(cls.MAX_N_PENDULUM, level // cls.INCRESE_PENDULUM_STAGE + 1)
+        pendulum_num = min(cls.MAX_N_PENDULUM, level // cls.INCREASE_PENDULUM_STAGE + 1)
         pendulums = []
         for i in range(pendulum_num):
             cx, cy = cls.PENDULUM_CENTERS[i]
@@ -331,12 +331,12 @@ class Stage:
 
     @classmethod
     def clear(cls, apples):
-        return all(apple.colected for apple in apples)
+        return all(apple.collected for apple in apples)
 
     @classmethod
     def reset(cls, apples):
         for apple in apples:
-            apple.colected = False
+            apple.collected = False
 
 
 class GameState(Enum):
@@ -439,18 +439,18 @@ class App:
                 for pendulum in self.pendulums:
                     pendulum.update(self.count)
                 self.character.update()
-                AffterImage.update()
+                AfterImage.update()
 
-                if not self.character.collisiton_to_startpoint():
+                if not self.character.collision_to_startpoint():
                     for pendulum in self.pendulums:
-                        if self.character.collisiton_to_pendulum(*pendulum.tip_position()):
+                        if self.character.collision_to_pendulum(*pendulum.tip_position()):
                             self.character.reset()
                             Stage.reset(self.apples)
                 for apple in self.apples:
-                    if self.character.collisiton_to_apple(apple):
-                        apple.colected = True
+                    if self.character.collision_to_apple(apple):
+                        apple.collected = True
                 
-                if self.character.collisiton_to_startpoint():
+                if self.character.collision_to_startpoint():
                     if Stage.clear(self.apples):
                         self.status = GameState.READY_STAGE
             case GameState.GAME_OVER:
@@ -484,23 +484,23 @@ class App:
                 pyxel.rect(0, 0, WINDOW_W, draw_split, 0)
                 for pendulum in self.pendulums:
                     pendulum.draw(self.count)
-                AffterImage.draw()
+                AfterImage.draw()
 
                 pyxel.clip(0, draw_split, WINDOW_W, WINDOW_H - draw_split)
                 pyxel.rect(0, draw_split, WINDOW_W, WINDOW_H - draw_split, 7)
                 for pendulum in self.pendulums:
                     pendulum.draw(self.count, reverse=True)
-                AffterImage.draw(reverse=True)
+                AfterImage.draw(reverse=True)
 
                 pyxel.clip()
                 StartPoint.draw()
                 for apple in self.apples:
-                    if apple.colected:
+                    if apple.collected:
                         continue
                     apple.draw()
                 self.character.draw()
 
-                pyxel.line(0, FLOAR, WINDOW_W, FLOAR, 9)
+                pyxel.line(0, FLOOR, WINDOW_W, FLOOR, 9)
             case GameState.GAME_OVER:
                 GameOverUI.draw()
 
