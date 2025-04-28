@@ -97,16 +97,21 @@ class Pendulum:
     def tip_position(self):
         return self.tip_pos
 
-    def draw(self, i, reverse=False):
-        c1, c2, c3 = 0, 7, 7
+    def draw(self, reverse=False):
+        c1, c2 = 0, 7
         if reverse:
-            c1, c2, c3 = 7, 7, 0
+            c1, c2 = 7, 7
         for s, t in zip(self.positions[:-1], self.positions[1:]):
             pyxel.line(s[0], s[1], t[0], t[1], c2)
         for p in self.positions[:-1]:
             pyxel.circ(p[0], p[1], self.SIZE, c1)
             pyxel.circb(p[0], p[1], self.SIZE, c2)
-        pyxel.circ(self.tip_pos[0], self.tip_pos[1], self.SIZE, c3)
+    
+    def draw_tip(self, reverse=False):
+        c = 7
+        if reverse:
+            c = 0
+        pyxel.circ(self.tip_pos[0], self.tip_pos[1], self.SIZE, c)
 
 
 class StartPoint:
@@ -560,14 +565,18 @@ class App:
                 pyxel.clip(0, 0, WINDOW_W, draw_split)
                 pyxel.rect(0, 0, WINDOW_W, draw_split, 0)
                 for pendulum in self.pendulums:
-                    pendulum.draw(self.count)
+                    pendulum.draw()
                 AfterImage.draw()
+                for pendulum in self.pendulums:
+                    pendulum.draw_tip()
 
                 pyxel.clip(0, draw_split, WINDOW_W, WINDOW_H - draw_split)
                 pyxel.rect(0, draw_split, WINDOW_W, WINDOW_H - draw_split, 7)
                 for pendulum in self.pendulums:
-                    pendulum.draw(self.count, reverse=True)
+                    pendulum.draw(reverse=True)
                 AfterImage.draw(reverse=True)
+                for pendulum in self.pendulums:
+                    pendulum.draw_tip(reverse=True)
 
                 pyxel.clip()
                 StartPoint.draw()
