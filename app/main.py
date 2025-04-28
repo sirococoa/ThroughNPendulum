@@ -559,7 +559,7 @@ class App:
                             self.character.dead()
                             self.restart()
                 for apple in self.apples:
-                    if self.character.collision_to_apple(apple):
+                    if self.character.collision_to_apple(apple) and not self.character.is_dead():
                         apple.collected = True
                 
                 if self.character.collision_to_startpoint():
