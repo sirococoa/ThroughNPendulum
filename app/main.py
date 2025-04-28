@@ -91,6 +91,8 @@ class Pendulum:
             y = -pos[1] + self.center[1]
             self.positions.append((int(x), int(y)))
         self.tip_pos = self.positions[-1]
+        if i % 4 == 0:
+            AfterImage.add_circle(*self.tip_pos)
 
     def tip_position(self):
         return self.tip_pos
@@ -105,8 +107,6 @@ class Pendulum:
             pyxel.circ(p[0], p[1], self.SIZE, c1)
             pyxel.circb(p[0], p[1], self.SIZE, c2)
         pyxel.circ(self.tip_pos[0], self.tip_pos[1], self.SIZE, c3)
-        if i % 4 == 0:
-            AfterImage.add_circle(*self.tip_pos)
 
 
 class StartPoint:
@@ -393,7 +393,7 @@ class MainMenuUI(UIBase):
         if pyxel.btnp(pyxel.KEY_SPACE):
             match cls.buttons[cls.selected_index]:
                 case cls.start_button:
-                    return GameState.READY_STAGE
+                    return GameState.PLAYING
 
     @classmethod
     def draw(cls):
@@ -409,7 +409,9 @@ class ReadyStageUI(UIBase):
 
     @classmethod
     def draw(cls):
-        s = "Now loading" + "."*(pyxel.frame_count % 4)
+        s = "Stage Clear"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 10)
+        s = "Now loading..."
         pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
 
 
@@ -428,8 +430,10 @@ class NextStageUI(UIBase):
     @classmethod
     def draw(cls, level):
         super().draw()
-        s = f"Stage : {level}"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
+        s = f"Stage Clear"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 10)
+        s = f"Next Stage : Level{level}"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
 
 
 class GameOverUI(UIBase):
@@ -482,6 +486,7 @@ class App:
                 state = MainMenuUI.update()
                 if state:
                     self.status = state
+                    self.set_next_stage()
             case GameState.READY_STAGE:
                 state = ReadyStageUI.update()
                 if state:
@@ -494,10 +499,8 @@ class App:
             case GameState.PLAYING:
                 self.count += 1
                 if self.count >= Stage.FLAME:
-                    self.count = 0
+                    self.game_over()
                     self.status = GameState.GAME_OVER
-                    self.character.reset()
-                    Stage.reset(self.apples)
                     return
 
                 for pendulum in self.pendulums:
@@ -535,6 +538,12 @@ class App:
     def restart(self):
         self.character.reset()
         Stage.reset(self.apples)
+    
+    def game_over(self):
+        self.count = 0
+        self.character.reset()
+        Stage.reset(self.apples)
+        AfterImage.clear()
 
     def draw(self):
         pyxel.cls(0)
