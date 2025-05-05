@@ -3,6 +3,7 @@ import pyxel
 from enum import Enum
 
 import pendulum
+import image
 
 WINDOW_W = 160
 WINDOW_H = 120
@@ -417,7 +418,7 @@ class UIBase:
 
 
 class MainMenuUI(UIBase):
-    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Start")
+    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3 - Button.H // 2, "Start")
     buttons = [start_button]
 
     @classmethod
@@ -431,8 +432,7 @@ class MainMenuUI(UIBase):
     @classmethod
     def draw(cls):
         super().draw()
-        s = "Through the N Pendulum"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
+        image.TitleImage.draw()
 
 
 class ReadyStageUI(UIBase):
@@ -442,8 +442,7 @@ class ReadyStageUI(UIBase):
 
     @classmethod
     def draw(cls):
-        s = "Stage Clear"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 10)
+        image.StageClearImage.draw()
         s = "Now loading..."
         pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
 
@@ -463,8 +462,7 @@ class NextStageUI(UIBase):
     @classmethod
     def draw(cls, level):
         super().draw()
-        s = f"Stage Clear"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 10)
+        image.StageClearImage.draw()
         s = f"Next Stage : Level{level}"
         pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
 
@@ -487,8 +485,7 @@ class GameOverUI(UIBase):
     @classmethod
     def draw(cls):
         super().draw()
-        s = "GAME OVER"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4, s, 13)
+        image.GameOverImage.draw()
 
 
 class App:
@@ -496,6 +493,8 @@ class App:
         pyxel.init(WINDOW_W, WINDOW_H)
         for i, c in enumerate(GRADATION):
             pyxel.colors[i] = c
+
+        image.load_images()
 
         self.initialize()
         pyxel.run(self.update, self.draw)
