@@ -374,9 +374,10 @@ class Stage:
 class GameState(Enum):
     MAIN_MENU = 0
     READY_STAGE = 1
-    NEXT_STAGE = 2
+    STAGE_CLEAR = 2
     PLAYING = 3
     GAME_OVER = 4
+    BACK_TO_MAIN_MENU = 5
 
 
 class Button:
@@ -405,6 +406,10 @@ class UIBase:
         cls.selected_index = 0
 
     @classmethod
+    def selected_button(cls):
+        return cls.buttons[cls.selected_index]
+
+    @classmethod
     def update(cls):
         if pyxel.btnp(pyxel.KEY_D):
             cls.selected_index = (cls.selected_index - 1) % len(cls.buttons)
@@ -418,8 +423,16 @@ class UIBase:
 
 
 class MainMenuUI(UIBase):
-    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3 - Button.H // 2, "Start")
-    buttons = [start_button]
+    continue_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3 - Button.H // 2, "Continue")
+    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3  + Button.H, "Start")
+    buttons = [start_button, continue_button]
+
+    @classmethod
+    def continue_stage(cls, avaliable):
+        if avaliable:
+            cls.buttons = [cls.continue_button, cls.start_button]
+        else:
+            cls.buttons = [cls.start_button]
 
     @classmethod
     def update(cls):
@@ -427,7 +440,9 @@ class MainMenuUI(UIBase):
         if pyxel.btnp(pyxel.KEY_SPACE):
             match cls.buttons[cls.selected_index]:
                 case cls.start_button:
-                    return GameState.PLAYING
+                    return GameState.READY_STAGE
+                case cls.continue_button:
+                    return GameState.READY_STAGE
 
     @classmethod
     def draw(cls):
@@ -438,18 +453,18 @@ class MainMenuUI(UIBase):
 class ReadyStageUI(UIBase):
     @classmethod
     def update(cls):
-        return GameState.NEXT_STAGE
+        return GameState.PLAYING
 
     @classmethod
     def draw(cls):
-        image.StageClearImage.draw()
         s = "Now loading..."
         pyxel.text(center(s, WINDOW_W), WINDOW_H//2, s, 13)
 
 
-class NextStageUI(UIBase):
+class StageClearUI(UIBase):
     next_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Next Stage")
-    buttons = [next_button]
+    title_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 + Button.H, "Back to Title")
+    buttons = [next_button, title_button]
 
     @classmethod
     def update(cls):
@@ -457,7 +472,9 @@ class NextStageUI(UIBase):
         if pyxel.btnp(pyxel.KEY_SPACE):
             match cls.buttons[cls.selected_index]:
                 case cls.next_button:
-                    return GameState.PLAYING
+                    return GameState.READY_STAGE
+                case cls.title_button:
+                    return GameState.BACK_TO_MAIN_MENU
 
     @classmethod
     def draw(cls, level):
@@ -480,12 +497,22 @@ class GameOverUI(UIBase):
                 case cls.retry_button:
                     return GameState.PLAYING
                 case cls.main_menu_button:
-                    return GameState.MAIN_MENU
+                    return GameState.BACK_TO_MAIN_MENU
  
     @classmethod
     def draw(cls):
         super().draw()
         image.GameOverImage.draw()
+
+
+class BackToMainMenuUI(UIBase):
+    @classmethod
+    def update(cls):
+        return GameState.MAIN_MENU
+
+    @classmethod
+    def draw(cls):
+        pass
 
 
 class App:
@@ -509,30 +536,29 @@ class App:
         AfterImage.clear()
         MainMenuUI.reset()
         ReadyStageUI.reset()
-        NextStageUI.reset()
+        StageClearUI.reset()
         GameOverUI.reset()
 
     def update(self):
         match self.status:
             case GameState.MAIN_MENU:
+                MainMenuUI.continue_stage(self.level > 0)
                 state = MainMenuUI.update()
-                if state:
-                    self.status = state
-                    self.set_next_stage()
+                if state and MainMenuUI.selected_button() == MainMenuUI.start_button:
+                    self.level = 1
+                    self.clear_stage()
+                self.update_status(state)
+
             case GameState.READY_STAGE:
                 state = ReadyStageUI.update()
-                if state:
-                    self.status = state
-                    self.set_next_stage()
-            case GameState.NEXT_STAGE:
-                state = NextStageUI.update()
-                if state:
-                    self.status = state
+                if not self.is_existed_stage():
+                    self.generate_stage()
+                self.update_status(state)
+
             case GameState.PLAYING:
                 self.count += 1
                 if self.count >= Stage.FLAME:
-                    self.game_over()
-                    self.status = GameState.GAME_OVER
+                    self.update_status(GameState.GAME_OVER)
                     return
 
                 for pendulum in self.pendulums:
@@ -547,22 +573,37 @@ class App:
                 for apple in self.apples:
                     if self.character.collision_to_apple(apple) and not self.character.is_dead():
                         apple.collected = True
-                
+
                 if self.character.collision_to_startpoint():
                     if Stage.clear(self.apples):
-                        self.status = GameState.READY_STAGE
+                        self.update_status(GameState.STAGE_CLEAR)
+
+            case GameState.STAGE_CLEAR:
+                state = StageClearUI.update()
+                self.update_status(state)
+
             case GameState.GAME_OVER:
                 state = GameOverUI.update()
-                if state:
-                    if state == GameState.PLAYING:
-                        self.status = state
-                    if state == GameState.MAIN_MENU:
-                        self.status = state
-                        self.initialize()
+                self.update_status(state)
 
-    def set_next_stage(self):
-        self.level += 1
+            case GameState.BACK_TO_MAIN_MENU:
+                state = BackToMainMenuUI.update()
+                self.update_status(state)
+
+    def is_existed_stage(self):
+        return len(self.pendulums) > 0
+
+    def generate_stage(self):
         self.pendulums, self.apples = Stage.generate(self.level)
+
+    def reset_stage(self):
+        self.character.reset()
+        self.count = 0
+        Stage.reset(self.apples)
+
+    def clear_stage(self):
+        self.pendulums = []
+        self.apples = []
         self.character.reset()
         self.count = 0
         AfterImage.clear()
@@ -570,11 +611,26 @@ class App:
     def restart(self):
         Stage.reset(self.apples)
     
-    def game_over(self):
-        self.count = 0
-        self.character.reset()
-        Stage.reset(self.apples)
-        AfterImage.clear()
+    def update_status(self, status):
+        if status:
+            self.status = status
+        match status:
+            case GameState.MAIN_MENU:
+                MainMenuUI.reset()
+            case GameState.READY_STAGE:
+                ReadyStageUI.reset()
+            case GameState.PLAYING:
+                self.reset_stage()
+            case GameState.STAGE_CLEAR:
+                self.level += 1
+                self.clear_stage()
+                StageClearUI.reset()
+                AfterImage.clear()
+            case GameState.GAME_OVER:
+                GameOverUI.reset()
+                AfterImage.clear()
+            case GameState.BACK_TO_MAIN_MENU:
+                BackToMainMenuUI.reset()
 
     def draw(self):
         pyxel.cls(0)
@@ -583,8 +639,8 @@ class App:
                 MainMenuUI.draw()
             case GameState.READY_STAGE:
                 ReadyStageUI.draw()
-            case GameState.NEXT_STAGE:
-                NextStageUI.draw(self.level)
+            case GameState.STAGE_CLEAR:
+                StageClearUI.draw(self.level)
             case GameState.PLAYING:
                 draw_split = WINDOW_H * self.count // Stage.FLAME
 
