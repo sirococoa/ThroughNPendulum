@@ -15,20 +15,7 @@ def center(text, width):
     return width // 2 - len(text) * TEXT_W // 2
 
 
-def generate_gradation(start_color, end_color, steps):
-    def interpolate(start, end, factor):
-        return int(start + (end - start) * factor)
-
-    gradation = []
-    for i in range(steps):
-        factor = i / (steps - 1)
-        r = interpolate((start_color >> 16) & 0xFF, (end_color >> 16) & 0xFF, factor)
-        g = interpolate((start_color >> 8) & 0xFF, (end_color >> 8) & 0xFF, factor)
-        b = interpolate(start_color & 0xFF, end_color & 0xFF, factor)
-        gradation.append((r << 16) | (g << 8) | b)
-    return tuple(gradation)
-
-GRADATION = generate_gradation(0x2b335f, 0xA9C1FF, 8)
+GRADATION = [0x2b335f, 0x3d4775, 0x4f5b8c, 0x616fa3, 0x7384ba, 0x8598d1, 0x97ace8, 0xa9c1ff]
 
 
 class AfterImage:
