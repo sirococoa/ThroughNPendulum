@@ -707,6 +707,8 @@ class App:
                 AfterImage.draw()
                 for pendulum in self.pendulums:
                     pendulum.draw_tip()
+                s = f"{self.level}"
+                pyxel.text(center(s, WINDOW_W), (FLOOR + WINDOW_H) // 2, s, 7)
 
                 pyxel.clip(0, draw_split, WINDOW_W, WINDOW_H - draw_split)
                 pyxel.rect(0, draw_split, WINDOW_W, WINDOW_H - draw_split, 7)
@@ -715,6 +717,8 @@ class App:
                 AfterImage.draw(reverse=True)
                 for pendulum in self.pendulums:
                     pendulum.draw_tip(reverse=True)
+                s = f"{self.level}"
+                pyxel.text(center(s, WINDOW_W), (FLOOR + WINDOW_H) // 2, s, 0)
 
                 pyxel.clip()
                 StartPoint.draw()
