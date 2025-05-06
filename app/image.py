@@ -47,8 +47,8 @@ class GameOverImage(ImageBase):
     file = "assets/gameover.png"
 
 class GameClearImage(ImageBase):
-    X = 32
-    Y = 24
-    W = 96
-    H = 16
+    X = 0
+    Y = 16
+    W = 160
+    H = 32
     file = "assets/gameclear.png"

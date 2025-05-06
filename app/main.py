@@ -16,25 +16,27 @@ def center(text, width):
     return width // 2 - len(text) * TEXT_W // 2
 
 
-GRADATION = [0x2b335f, 0x3d4775, 0x4f5b8c, 0x616fa3, 0x7384ba, 0x8598d1, 0x97ace8, 0xa9c1ff]
+GRADATION = [0x2b335f, 0x3d4775, 0x4f5b8c, 0x616fa3,
+             0x7384ba, 0x8598d1, 0x97ace8, 0xa9c1ff]
 
 
 class AfterImage:
     SIZE = 5
     COUNT = 20
-    circles = [] # [(x, y, count)]
+    circles = []  # [(x, y, count)]
 
     @classmethod
     def add_circle(cls, x, y):
         cls.circles.append((x, y, cls.COUNT))
-    
+
     @classmethod
     def clear(cls):
         cls.circles = []
 
     @classmethod
     def update(cls):
-        cls.circles = [(x, y, count - 1) for x, y, count in cls.circles if count > 0]
+        cls.circles = [(x, y, count - 1)
+                       for x, y, count in cls.circles if count > 0]
 
     @classmethod
     def draw(cls, reverse=False):
@@ -61,7 +63,8 @@ class Pendulum:
         lengths = [pyxel.rndf(*self.LENGTH_RANGE) for _ in range(n)]
         weights = [pyxel.rndf(*self.WEIGHT_RANGE) for _ in range(n)]
         init_angles = [pyxel.rndf(*self.INIT_ANGLE_RANGE) for _ in range(n)]
-        init_velocities = [pyxel.rndf(*self.INIT_VELOCITY_RANGE) for _ in range(n)]
+        init_velocities = [pyxel.rndf(*self.INIT_VELOCITY_RANGE)
+                           for _ in range(n)]
         p = pendulum.PendulumSolver(
             lengths,
             weights,
@@ -95,7 +98,7 @@ class Pendulum:
         for p in self.positions[:-1]:
             pyxel.circ(p[0], p[1], self.SIZE, c1)
             pyxel.circb(p[0], p[1], self.SIZE, c2)
-    
+
     def draw_tip(self, reverse=False):
         c = 7
         if reverse:
@@ -114,6 +117,7 @@ class StartPoint:
     def draw(cls):
         pyxel.rect(cls.X, cls.Y, cls.W, cls.H, cls.COLOR)
 
+
 class Apple:
     R = 4
     COLOR = 8
@@ -128,7 +132,7 @@ class Apple:
         self.y = y
         self.collected = False
 
-    def draw(self): 
+    def draw(self):
         pyxel.circ(self.x, self.y, self.R, self.COLOR)
 
     @classmethod
@@ -144,6 +148,7 @@ class CharacterStatus(Enum):
     START = 2
     DEAD = 3
     RE_SPAWN = 4
+
 
 class Character:
     W = 10
@@ -173,16 +178,16 @@ class Character:
         self.count = self.START_COUNT
         self.status = CharacterStatus.START
         self.double_jumped = False
-    
+
     def dead(self):
         self.vx = 0
         self.vy = 0
         self.status = CharacterStatus.DEAD
         self.count = self.DEAD_COUNT
-    
+
     def is_dead(self):
         return self.status == CharacterStatus.DEAD
-    
+
     def re_spawn(self):
         self.x = StartPoint.X + StartPoint.W // 2 - self.W // 2
         self.y = StartPoint.Y + StartPoint.H // 2 - self.H // 2
@@ -307,7 +312,7 @@ class Character:
         if (self.x < StartPoint.X + StartPoint.W and
             self.x + self.W > StartPoint.X and
             self.y < StartPoint.Y + StartPoint.H and
-            self.y + self.H > StartPoint.Y):
+                self.y + self.H > StartPoint.Y):
             return True
         return False
 
@@ -331,7 +336,8 @@ class Character:
         if self.status == CharacterStatus.RE_SPAWN:
             scale = self.count
             dx = dy = scale
-        pyxel.rect(self.x + dx, self.y + dy, self.W - 2*dx, self.H - 2*dy, self.COLOR)
+        pyxel.rect(self.x + dx, self.y + dy, self.W -
+                   2*dx, self.H - 2*dy, self.COLOR)
 
 
 class Stage:
@@ -344,13 +350,15 @@ class Stage:
         (WINDOW_W // 8 * 5, WINDOW_H // 6),
     )
     INCREASE_PENDULUM_STAGE = 10
+    GAME_CLEAR_STAGE = 50
     PENDULUM_RANGE = (2, 5)
 
     FLAME = 600
 
     @classmethod
     def generate(cls, level):
-        pendulum_num = min(cls.MAX_N_PENDULUM, level // cls.INCREASE_PENDULUM_STAGE + 1)
+        pendulum_num = min(cls.MAX_N_PENDULUM, level //
+                           cls.INCREASE_PENDULUM_STAGE + 1)
         pendulums = []
         for i in range(pendulum_num):
             cx, cy = cls.PENDULUM_CENTERS[i]
@@ -378,6 +386,7 @@ class GameState(Enum):
     PLAYING = 3
     GAME_OVER = 4
     BACK_TO_MAIN_MENU = 5
+    GAME_CLEAR = 6
 
 
 class Button:
@@ -395,7 +404,9 @@ class Button:
         else:
             c = 13
         pyxel.rectb(self.x, self.y, self.W, self.H, c)
-        pyxel.text(self.x + center(self.message, self.W), self.y + self.H // 2 - 3, self.message, c)
+        pyxel.text(self.x + center(self.message, self.W),
+                   self.y + self.H // 2 - 3, self.message, c)
+
 
 class UIBase:
     buttons = []
@@ -415,16 +426,18 @@ class UIBase:
             cls.selected_index = (cls.selected_index - 1) % len(cls.buttons)
         elif pyxel.btnp(pyxel.KEY_A):
             cls.selected_index = (cls.selected_index + 1) % len(cls.buttons)
-    
+
     @classmethod
     def draw(cls):
         for i, button in enumerate(cls.buttons):
-            button.draw(i==cls.selected_index)
+            button.draw(i == cls.selected_index)
 
 
 class MainMenuUI(UIBase):
-    continue_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3 - Button.H // 2, "Continue")
-    start_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 4 * 3  + Button.H, "Start")
+    continue_button = Button(WINDOW_W // 2 - Button.W //
+                             2, WINDOW_H // 4 * 3 - Button.H // 2, "Continue")
+    start_button = Button(WINDOW_W // 2 - Button.W // 2,
+                          WINDOW_H // 4 * 3 + Button.H, "Start")
     buttons = [start_button, continue_button]
 
     @classmethod
@@ -462,8 +475,10 @@ class ReadyStageUI(UIBase):
 
 
 class StageClearUI(UIBase):
-    next_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Next Stage")
-    title_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 + Button.H, "Back to Title")
+    next_button = Button(WINDOW_W // 2 - Button.W // 2,
+                         WINDOW_H // 2 - Button.H // 2, "Next Stage")
+    title_button = Button(WINDOW_W // 2 - Button.W // 2,
+                          WINDOW_H // 2 + Button.H, "Back to Title")
     buttons = [next_button, title_button]
 
     @classmethod
@@ -480,13 +495,40 @@ class StageClearUI(UIBase):
     def draw(cls, level):
         super().draw()
         image.StageClearImage.draw()
-        s = f"Next Stage : Level{level}"
+        s = f"Next Stage : Level {level}"
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
+
+
+class GameClearUI(UIBase):
+    endress_button = Button(WINDOW_W // 2 - Button.W //
+                            2, WINDOW_H // 2 - Button.H // 2, "Endress")
+    title_button = Button(WINDOW_W // 2 - Button.W // 2,
+                          WINDOW_H // 2 + Button.H, "Back to Title")
+    buttons = [endress_button, title_button]
+
+    @classmethod
+    def update(cls):
+        super().update()
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            match cls.buttons[cls.selected_index]:
+                case cls.endress_button:
+                    return GameState.READY_STAGE
+                case cls.title_button:
+                    return GameState.BACK_TO_MAIN_MENU
+
+    @classmethod
+    def draw(cls, level):
+        super().draw()
+        image.GameClearImage.draw()
+        s = f"Next Stage : Level {level}"
         pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
 
 
 class GameOverUI(UIBase):
-    retry_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 - Button.H // 2, "Retry Stage")
-    main_menu_button = Button(WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 + Button.H, "Main Menu")
+    retry_button = Button(WINDOW_W // 2 - Button.W // 2,
+                          WINDOW_H // 2 - Button.H // 2, "Retry Stage")
+    main_menu_button = Button(
+        WINDOW_W // 2 - Button.W // 2, WINDOW_H // 2 + Button.H, "Main Menu")
     buttons = [retry_button, main_menu_button]
 
     @classmethod
@@ -498,7 +540,7 @@ class GameOverUI(UIBase):
                     return GameState.PLAYING
                 case cls.main_menu_button:
                     return GameState.BACK_TO_MAIN_MENU
- 
+
     @classmethod
     def draw(cls):
         super().draw()
@@ -525,7 +567,7 @@ class App:
 
         self.initialize()
         pyxel.run(self.update, self.draw)
-    
+
     def initialize(self):
         self.level = 0
         self.pendulums = []
@@ -576,10 +618,17 @@ class App:
 
                 if self.character.collision_to_startpoint():
                     if Stage.clear(self.apples):
-                        self.update_status(GameState.STAGE_CLEAR)
+                        if self.level == Stage.GAME_CLEAR_STAGE:
+                            self.update_status(GameState.GAME_CLEAR)
+                        else:
+                            self.update_status(GameState.STAGE_CLEAR)
 
             case GameState.STAGE_CLEAR:
                 state = StageClearUI.update()
+                self.update_status(state)
+
+            case GameState.GAME_CLEAR:
+                state = GameClearUI.update()
                 self.update_status(state)
 
             case GameState.GAME_OVER:
@@ -610,7 +659,7 @@ class App:
 
     def restart(self):
         Stage.reset(self.apples)
-    
+
     def update_status(self, status):
         if status:
             self.status = status
@@ -625,6 +674,11 @@ class App:
                 self.level += 1
                 self.clear_stage()
                 StageClearUI.reset()
+                AfterImage.clear()
+            case GameState.GAME_CLEAR:
+                self.level += 1
+                self.clear_stage()
+                GameClearUI.reset()
                 AfterImage.clear()
             case GameState.GAME_OVER:
                 GameOverUI.reset()
@@ -641,6 +695,8 @@ class App:
                 ReadyStageUI.draw()
             case GameState.STAGE_CLEAR:
                 StageClearUI.draw(self.level)
+            case GameState.GAME_CLEAR:
+                GameClearUI.draw(self.level)
             case GameState.PLAYING:
                 draw_split = WINDOW_H * self.count // Stage.FLAME
 
