@@ -496,7 +496,7 @@ class StageClearUI(UIBase):
         super().draw()
         image.StageClearImage.draw()
         s = f"Next Stage : Level {level}"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 7)
 
 
 class GameClearUI(UIBase):
@@ -521,7 +521,7 @@ class GameClearUI(UIBase):
         super().draw()
         image.GameClearImage.draw()
         s = f"Next Stage : Level {level}"
-        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 13)
+        pyxel.text(center(s, WINDOW_W), WINDOW_H//4 * 3, s, 7)
 
 
 class GameOverUI(UIBase):
@@ -731,6 +731,7 @@ class App:
                 pyxel.line(0, FLOOR, WINDOW_W, FLOOR, 9)
             case GameState.GAME_OVER:
                 GameOverUI.draw()
+        pyxel.text(4, WINDOW_H - 8, "A\D\SPACE", 4)
 
 
 App()
